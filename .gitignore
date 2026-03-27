@@ -8,3 +8,4 @@ obj/
 *.suo
 /Code/Client/RemoteDesktopClient/RemoteDesktopClient.csproj.user
 /Code/Server/RemoteDesktopServer/RemoteDesktopServer.csproj.user
+/Code/Server/RemoteDesktopServer/RemoteDesktopServer.slnLaunch.user

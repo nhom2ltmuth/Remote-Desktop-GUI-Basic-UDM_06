@@ -1,6 +1,6 @@
-﻿namespace RemoteDesktopServer
+﻿namespace RemoteDesktopClient
 {
-    partial class Form1
+    partial class ClientForm
     {
         /// <summary>
         ///  Required designer variable.
@@ -28,10 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
+            SuspendLayout();
+            // 
+            // ClientForm
+            // 
+            AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Text = "Form1";
+            Name = "ClientForm";
+            Text = "Remote Desktop Client";
+            ResumeLayout(false);
         }
 
         #endregion
