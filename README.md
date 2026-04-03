@@ -92,8 +92,33 @@ The application is designed to assist technical staff in troubleshooting custome
 - Input Handling: Windows API
 - IDE: Visual Studio
 - Version Control: Git & GitHub
+## System Architecture
+The system is designed based on a Client-Server architecture.
+- The Server captures screen data and sends it to the client
+- The Client connects to the server and displays the remote screen
+- The Client sends mouse and keyboard events to the server
+- Communication is established using TCP sockets
+Data Flow:
+1. Client connects to Server
+2. Server accepts connection
+3. Server captures screen
+4. Server sends screen data to Client
+5. Client displays screen
+6. Client sends input events
+7. Server executes input actions
+## 📂 Project Structure
+- Server/
+  + ServerForm.cs
+  + ServerSocketService.cs
+- Client/
+  + ClientForm.cs
+  + ClientSocketService.cs
+- Services/
+  + Network handling
+  + Data processing
+- UI/
+  + Forms and layout
 
-## Project Structure
 
 
 
