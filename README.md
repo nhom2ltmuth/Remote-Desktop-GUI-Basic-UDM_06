@@ -47,6 +47,14 @@ The application is designed to assist technical staff in troubleshooting custome
 ## Main Features
 
 ## Technologies Used
+- Programming Language: C#
+- Framework: .NET (Windows Forms)
+- Network Communication: System.Net.Sockets
+- Architecture: Client-Server
+- Image Processing: System.Drawing
+- Input Handling: Windows API
+- IDE: Visual Studio
+- Version Control: Git & GitHub
 
 ## Project Structure
 
