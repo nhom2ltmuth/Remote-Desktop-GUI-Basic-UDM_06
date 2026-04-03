@@ -43,7 +43,24 @@ The application is designed to assist technical staff in troubleshooting custome
      + Implement ClientSocketService (connect server)
      + Send/receive test messages
      + Handle connection errors
-     + Log connection status  
+     + Log connection status
+## Objectives
+1. Purpose of the Application
+   - Develop a Remote Desktop application that allows users to connect to another computer remotely
+   - Enable real-time screen viewing from the server
+   - Allow users to control the remote computer using mouse and keyboard in real-time
+   - Support basic remote management and monitoring
+2. Development Goals
+   - Design a Client-Server architecture using socket programming
+   - Build user interfaces for both Server and Client using Windows Forms
+   - Implement real-time network communication between client and server
+   - Capture, encode, and transmit screen data from server to client
+   - Handle remote input events (mouse and keyboard)
+   - Integrate all modules into a complete working system
+   - Perform testing and debugging to ensure system stability
+3. Learning Outcome
+   - Understand how real-time communication systems work
+   - Gain experience in network programming and system integration
 ## Main Features
 
 ## Technologies Used
