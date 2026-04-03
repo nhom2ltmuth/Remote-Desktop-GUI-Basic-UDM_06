@@ -106,7 +106,7 @@ Data Flow:
 5. Client displays screen
 6. Client sends input events
 7. Server executes input actions
-## 📂 Project Structure
+## Project Structure
 - Server/
   + ServerForm.cs
   + ServerSocketService.cs
