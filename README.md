@@ -61,8 +61,28 @@ The application is designed to assist technical staff in troubleshooting custome
 3. Learning Outcome
    - Understand how real-time communication systems work
    - Gain experience in network programming and system integration
-## Main Features
+## Main Functions
 
+1. Server Functions
+   - Start the server and listen for client connections
+   - Display server IP address and port number
+   - Show current connection status (Waiting, Connected, Disconnected)
+   - Accept connection requests from clients
+   - Send screen data to the connected client
+   - Receive control commands from the client
+2. Client Functions
+   - Enter server IP address and port number
+   - Connect to the remote server
+   - Display the remote screen from the server
+   - Send mouse actions to the server
+   - Send keyboard input to the server
+   - Show connection status and error messages
+3. System Functions
+   - Establish communication between server and client using sockets
+   - Transmit screen data in real-time
+   - Support remote monitoring and control
+   - Handle connection errors and disconnection events
+   - Integrate all modules into one complete application
 ## Technologies Used
 - Programming Language: C#
 - Framework: .NET (Windows Forms)
