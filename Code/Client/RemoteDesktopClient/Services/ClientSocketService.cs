@@ -13,6 +13,7 @@ namespace RemoteDesktopClient.Services
         private bool isRunning;
 
         public Action<string> OnLog;
+        public Action<string> OnMessageReceived;
 
         public bool IsConnected => client != null && client.Connected;
 
@@ -32,7 +33,7 @@ namespace RemoteDesktopClient.Services
                 stream = client.GetStream();
                 isRunning = true;
 
-                OnLog?.Invoke("Connected to server.");
+                OnLog?.Invoke($"Connected to server: {ip}:{port}");
 
                 receiveThread = new Thread(ReceiveData);
                 receiveThread.IsBackground = true;
@@ -46,7 +47,7 @@ namespace RemoteDesktopClient.Services
 
         private void ReceiveData()
         {
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[4096];
 
             while (isRunning)
             {
@@ -65,6 +66,7 @@ namespace RemoteDesktopClient.Services
 
                     string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                     OnLog?.Invoke("Received: " + message);
+                    OnMessageReceived?.Invoke(message);
                 }
                 catch (Exception ex)
                 {
@@ -76,7 +78,7 @@ namespace RemoteDesktopClient.Services
                 }
             }
 
-            isRunning = false;
+            DisconnectInternal(false);
         }
 
         public void Send(string message)
@@ -102,6 +104,11 @@ namespace RemoteDesktopClient.Services
 
         public void Disconnect()
         {
+            DisconnectInternal(true);
+        }
+
+        private void DisconnectInternal(bool writeLog)
+        {
             try
             {
                 isRunning = false;
@@ -113,7 +120,10 @@ namespace RemoteDesktopClient.Services
                 client = null;
                 receiveThread = null;
 
-                OnLog?.Invoke("Disconnected from server.");
+                if (writeLog)
+                {
+                    OnLog?.Invoke("Disconnected from server.");
+                }
             }
             catch (Exception ex)
             {
