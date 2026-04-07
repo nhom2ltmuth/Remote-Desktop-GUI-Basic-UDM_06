@@ -21,6 +21,7 @@ namespace RemoteDesktopClient
         {
             InitializeComponentSafe();
             InitializeSocket();
+            UpdateButtonState(false);
         }
 
         private void InitializeComponentSafe()
@@ -110,13 +111,17 @@ namespace RemoteDesktopClient
             socketService.OnLog = (message) =>
             {
                 if (this.InvokeRequired)
-                {
                     this.Invoke(new Action(() => AppendLog(message)));
-                }
                 else
-                {
                     AppendLog(message);
-                }
+            };
+
+            socketService.OnMessageReceived = (message) =>
+            {
+                if (this.InvokeRequired)
+                    this.Invoke(new Action(() => HandleServerMessage(message)));
+                else
+                    HandleServerMessage(message);
             };
         }
 
@@ -124,29 +129,51 @@ namespace RemoteDesktopClient
         {
             string ip = txtIP.Text.Trim();
 
-            if (!int.TryParse(txtPort.Text.Trim(), out int port))
-            {
-                MessageBox.Show("Port không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
             if (string.IsNullOrWhiteSpace(ip))
             {
                 MessageBox.Show("Vui lòng nhập IP.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            if (!int.TryParse(txtPort.Text.Trim(), out int port))
+            {
+                MessageBox.Show("Port không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             socketService.Connect(ip, port);
+            UpdateButtonState(socketService.IsConnected);
         }
 
         private void BtnDisconnect_Click(object sender, EventArgs e)
         {
             socketService.Disconnect();
+            UpdateButtonState(false);
+        }
+
+        private void HandleServerMessage(string message)
+        {
+            // Tạm thời chỉ log text
+            AppendLog("Server message handled: " + message);
         }
 
         private void AppendLog(string message)
         {
-            txtLog.AppendText(message + Environment.NewLine);
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+
+            if (message.Contains("Connected to server"))
+                UpdateButtonState(true);
+
+            if (message.Contains("Disconnected") || message.Contains("Connection failed") || message.Contains("Server disconnected"))
+                UpdateButtonState(false);
+        }
+
+        private void UpdateButtonState(bool connected)
+        {
+            btnConnect.Enabled = !connected;
+            btnDisconnect.Enabled = connected;
+            txtIP.Enabled = !connected;
+            txtPort.Enabled = !connected;
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
