@@ -15,113 +15,146 @@ namespace RemoteDesktopClient
         private Button btnDisconnect;
         private PictureBox picRemoteScreen;
 
-        private ClientSocketService socketService;
+        private readonly ClientSocketService socketService;
+        private readonly RemoteScreenService screenService;
 
         public ClientForm()
         {
             InitializeComponentSafe();
-            InitializeSocket();
+
+            socketService = new ClientSocketService();
+            screenService = new RemoteScreenService();
+
+            InitializeSocketEvents();
             UpdateButtonState(false);
         }
 
         private void InitializeComponentSafe()
         {
-            this.Text = "Client Remote Desktop";
-            this.Size = new Size(950, 650);
-            this.StartPosition = FormStartPosition.CenterScreen;
+            Text = "Client Remote Desktop";
+            Size = new Size(950, 650);
+            StartPosition = FormStartPosition.CenterScreen;
 
-            Label lblIP = new Label();
-            lblIP.Text = "IP:";
-            lblIP.Location = new Point(20, 20);
-            lblIP.AutoSize = true;
-
-            txtIP = new TextBox();
-            txtIP.Location = new Point(50, 18);
-            txtIP.Width = 140;
-            txtIP.Text = "127.0.0.1";
-
-            Label lblPort = new Label();
-            lblPort.Text = "Port:";
-            lblPort.Location = new Point(210, 20);
-            lblPort.AutoSize = true;
-
-            txtPort = new TextBox();
-            txtPort.Location = new Point(250, 18);
-            txtPort.Width = 80;
-            txtPort.Text = "5000";
-
-            Label lblPass = new Label();
-            lblPass.Text = "Password:";
-            lblPass.Location = new Point(350, 20);
-            lblPass.AutoSize = true;
-
-            txtPassword = new TextBox();
-            txtPassword.Location = new Point(430, 18);
-            txtPassword.Width = 140;
-            txtPassword.PasswordChar = '*';
-
-            btnConnect = new Button();
-            btnConnect.Text = "Connect";
-            btnConnect.Location = new Point(590, 15);
-            btnConnect.Width = 100;
-            btnConnect.Click += BtnConnect_Click;
-
-            btnDisconnect = new Button();
-            btnDisconnect.Text = "Disconnect";
-            btnDisconnect.Location = new Point(700, 15);
-            btnDisconnect.Width = 100;
-            btnDisconnect.Click += BtnDisconnect_Click;
-
-            picRemoteScreen = new PictureBox();
-            picRemoteScreen.Location = new Point(20, 60);
-            picRemoteScreen.Size = new Size(880, 460);
-            picRemoteScreen.BorderStyle = BorderStyle.FixedSingle;
-            picRemoteScreen.SizeMode = PictureBoxSizeMode.StretchImage;
-            picRemoteScreen.BackColor = Color.Black;
-
-            Label lblLog = new Label();
-            lblLog.Text = "Log:";
-            lblLog.Location = new Point(20, 535);
-            lblLog.AutoSize = true;
-
-            txtLog = new TextBox();
-            txtLog.Location = new Point(20, 560);
-            txtLog.Size = new Size(880, 50);
-            txtLog.Multiline = true;
-            txtLog.ScrollBars = ScrollBars.Vertical;
-            txtLog.ReadOnly = true;
-
-            this.Controls.Add(lblIP);
-            this.Controls.Add(txtIP);
-            this.Controls.Add(lblPort);
-            this.Controls.Add(txtPort);
-            this.Controls.Add(lblPass);
-            this.Controls.Add(txtPassword);
-            this.Controls.Add(btnConnect);
-            this.Controls.Add(btnDisconnect);
-            this.Controls.Add(picRemoteScreen);
-            this.Controls.Add(lblLog);
-            this.Controls.Add(txtLog);
-        }
-
-        private void InitializeSocket()
-        {
-            socketService = new ClientSocketService();
-
-            socketService.OnLog = (message) =>
+            Label lblIP = new Label
             {
-                if (this.InvokeRequired)
-                    this.Invoke(new Action(() => AppendLog(message)));
-                else
-                    AppendLog(message);
+                Text = "IP:",
+                Location = new Point(20, 20),
+                AutoSize = true
             };
 
-            socketService.OnMessageReceived = (message) =>
+            txtIP = new TextBox
             {
-                if (this.InvokeRequired)
-                    this.Invoke(new Action(() => HandleServerMessage(message)));
+                Location = new Point(50, 18),
+                Width = 140,
+                Text = "127.0.0.1"
+            };
+
+            Label lblPort = new Label
+            {
+                Text = "Port:",
+                Location = new Point(210, 20),
+                AutoSize = true
+            };
+
+            txtPort = new TextBox
+            {
+                Location = new Point(250, 18),
+                Width = 80,
+                Text = "9999"
+            };
+
+            Label lblPass = new Label
+            {
+                Text = "Password:",
+                Location = new Point(350, 20),
+                AutoSize = true
+            };
+
+            txtPassword = new TextBox
+            {
+                Location = new Point(430, 18),
+                Width = 140,
+                PasswordChar = '*'
+            };
+
+            btnConnect = new Button
+            {
+                Text = "Connect",
+                Location = new Point(590, 15),
+                Width = 100
+            };
+            btnConnect.Click += BtnConnect_Click;
+
+            btnDisconnect = new Button
+            {
+                Text = "Disconnect",
+                Location = new Point(700, 15),
+                Width = 100
+            };
+            btnDisconnect.Click += BtnDisconnect_Click;
+
+            picRemoteScreen = new PictureBox
+            {
+                Location = new Point(20, 60),
+                Size = new Size(880, 460),
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                BackColor = Color.Black
+            };
+
+            Label lblLog = new Label
+            {
+                Text = "Log:",
+                Location = new Point(20, 535),
+                AutoSize = true
+            };
+
+            txtLog = new TextBox
+            {
+                Location = new Point(20, 560),
+                Size = new Size(880, 50),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                ReadOnly = true
+            };
+
+            Controls.Add(lblIP);
+            Controls.Add(txtIP);
+            Controls.Add(lblPort);
+            Controls.Add(txtPort);
+            Controls.Add(lblPass);
+            Controls.Add(txtPassword);
+            Controls.Add(btnConnect);
+            Controls.Add(btnDisconnect);
+            Controls.Add(picRemoteScreen);
+            Controls.Add(lblLog);
+            Controls.Add(txtLog);
+        }
+
+        private void InitializeSocketEvents()
+        {
+            socketService.OnLog = message =>
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => AppendLog(message)));
+                }
                 else
-                    HandleServerMessage(message);
+                {
+                    AppendLog(message);
+                }
+            };
+
+            socketService.OnImageReceived = imageBytes =>
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => DisplayRemoteScreen(imageBytes)));
+                }
+                else
+                {
+                    DisplayRemoteScreen(imageBytes);
+                }
             };
         }
 
@@ -151,10 +184,20 @@ namespace RemoteDesktopClient
             UpdateButtonState(false);
         }
 
-        private void HandleServerMessage(string message)
+        private void DisplayRemoteScreen(byte[] imageBytes)
         {
-            // Tạm thời chỉ log text
-            AppendLog("Server message handled: " + message);
+            try
+            {
+                Image image = screenService.ConvertBytesToImage(imageBytes);
+
+                Image oldImage = picRemoteScreen.Image;
+                picRemoteScreen.Image = image;
+                oldImage?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                AppendLog("Display image error: " + ex.Message);
+            }
         }
 
         private void AppendLog(string message)
@@ -162,10 +205,16 @@ namespace RemoteDesktopClient
             txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
 
             if (message.Contains("Connected to server"))
+            {
                 UpdateButtonState(true);
+            }
 
-            if (message.Contains("Disconnected") || message.Contains("Connection failed") || message.Contains("Server disconnected"))
+            if (message.Contains("Disconnected") ||
+                message.Contains("Connection failed") ||
+                message.Contains("Server disconnected"))
+            {
                 UpdateButtonState(false);
+            }
         }
 
         private void UpdateButtonState(bool connected)
@@ -178,7 +227,8 @@ namespace RemoteDesktopClient
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            socketService?.Disconnect();
+            picRemoteScreen.Image?.Dispose();
+            socketService.Disconnect();
             base.OnFormClosing(e);
         }
     }
