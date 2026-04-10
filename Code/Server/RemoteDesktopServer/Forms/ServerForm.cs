@@ -1,20 +1,26 @@
 using System;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Windows.Forms;
+using RemoteDesktopServer.Services;
 
 namespace RemoteDesktopServer
 {
     public partial class ServerForm : Form
     {
-        private TcpListener? server;
-        private Thread? listenThread;
-        private bool isRunning = false;
+        private readonly ServerSocketService socketService;
+        private readonly ScreenCaptureService screenService;
+
+        private Thread? sendScreenThread;
+        private bool isSending;
 
         public ServerForm()
         {
             InitializeComponent();
+
+            socketService = new ServerSocketService();
+            screenService = new ScreenCaptureService();
+
+            socketService.OnLog += UpdateStatus;
         }
 
         private void ServerForm_Load(object sender, EventArgs e)
@@ -27,63 +33,48 @@ namespace RemoteDesktopServer
         {
             try
             {
-                if (isRunning)
+                if (socketService.IsRunning)
                 {
                     MessageBox.Show("Server is already running.");
                     return;
                 }
 
-                server = new TcpListener(IPAddress.Any, 9999);
-                server.Start();
+                socketService.Start(9999);
 
-                isRunning = true;
-                lblStatus.Text = "Waiting for client...";
                 btnStart.Enabled = false;
                 btnStop.Enabled = true;
 
-                listenThread = new Thread(ListenForClient);
-                listenThread.IsBackground = true;
-                listenThread.Start();
+                isSending = true;
+                sendScreenThread = new Thread(SendScreenLoop);
+                sendScreenThread.IsBackground = true;
+                sendScreenThread.Start();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi khi khởi động server: " + ex.Message);
-                isRunning = false;
-                server = null;
-                lblStatus.Text = "Server stopped";
-                btnStart.Enabled = true;
-                btnStop.Enabled = false;
+                StopServerUI();
             }
         }
 
-        private void ListenForClient()
+        private void SendScreenLoop()
         {
-            try
+            while (isSending)
             {
-                while (isRunning && server != null)
+                try
                 {
-                    TcpClient client = server.AcceptTcpClient();
+                    if (socketService.IsClientConnected)
+                    {
+                        byte[] screenBytes = screenService.CaptureScreenBytes();
+                        socketService.SendData(screenBytes);
+                    }
 
-                    UpdateStatus("Client connected: " + client.Client.RemoteEndPoint);
-
-                    // Tạm thời chỉ test kết nối rồi đóng client
-                    // Sau này có thể xử lý nhận/gửi dữ liệu ở đây
-                    client.Close();
-
-                    UpdateStatus("Waiting for client...");
+                    Thread.Sleep(200);
                 }
-            }
-            catch (SocketException)
-            {
-                // Xảy ra khi server.Stop() lúc đang AcceptTcpClient()
-                if (isRunning)
+                catch (Exception ex)
                 {
-                    UpdateStatus("Socket error while listening.");
+                    UpdateStatus("Send screen error: " + ex.Message);
+                    Thread.Sleep(500);
                 }
-            }
-            catch (Exception ex)
-            {
-                UpdateStatus("Error: " + ex.Message);
             }
         }
 
@@ -91,28 +82,39 @@ namespace RemoteDesktopServer
         {
             try
             {
-                isRunning = false;
-
-                if (server != null)
-                {
-                    server.Stop();
-                    server = null;
-                }
-
-                if (listenThread != null && listenThread.IsAlive)
-                {
-                    listenThread.Join(500);
-                    listenThread = null;
-                }
-
-                lblStatus.Text = "Server stopped";
-                btnStart.Enabled = true;
-                btnStop.Enabled = false;
+                StopServer();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi khi dừng server: " + ex.Message);
             }
+        }
+
+        private void StopServer()
+        {
+            isSending = false;
+
+            if (sendScreenThread != null && sendScreenThread.IsAlive)
+            {
+                sendScreenThread.Join(500);
+                sendScreenThread = null;
+            }
+
+            socketService.Stop();
+            StopServerUI();
+        }
+
+        private void StopServerUI()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(StopServerUI));
+                return;
+            }
+
+            btnStart.Enabled = true;
+            btnStop.Enabled = false;
+            lblStatus.Text = "Server stopped";
         }
 
         private void UpdateStatus(string message)
@@ -134,13 +136,7 @@ namespace RemoteDesktopServer
         {
             try
             {
-                isRunning = false;
-
-                if (server != null)
-                {
-                    server.Stop();
-                    server = null;
-                }
+                StopServer();
             }
             catch
             {

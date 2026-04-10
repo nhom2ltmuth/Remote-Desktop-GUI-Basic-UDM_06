@@ -45,8 +45,14 @@ namespace RemoteDesktopServer.Services
                 {
                     client = server.AcceptTcpClient();
                     stream = client.GetStream();
-
                     OnLog?.Invoke("Client connected!");
+                }
+            }
+            catch (SocketException)
+            {
+                if (isRunning)
+                {
+                    OnLog?.Invoke("Socket error while listening.");
                 }
             }
             catch (Exception ex)
@@ -61,12 +67,10 @@ namespace RemoteDesktopServer.Services
             {
                 if (stream != null && client != null && client.Connected)
                 {
-                    // gửi độ dài trước
-                    byte[] length = BitConverter.GetBytes(data.Length);
-                    stream.Write(length, 0, length.Length);
-
-                    // gửi dữ liệu
+                    byte[] lengthBytes = BitConverter.GetBytes(data.Length);
+                    stream.Write(lengthBytes, 0, lengthBytes.Length);
                     stream.Write(data, 0, data.Length);
+                    stream.Flush();
                 }
             }
             catch (Exception ex)
@@ -84,6 +88,16 @@ namespace RemoteDesktopServer.Services
                 stream?.Close();
                 client?.Close();
                 server?.Stop();
+
+                if (listenThread != null && listenThread.IsAlive)
+                {
+                    listenThread.Join(500);
+                    listenThread = null;
+                }
+
+                stream = null;
+                client = null;
+                server = null;
 
                 OnLog?.Invoke("Server stopped.");
             }
