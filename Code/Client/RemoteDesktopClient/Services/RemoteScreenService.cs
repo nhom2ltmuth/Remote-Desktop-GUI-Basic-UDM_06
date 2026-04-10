@@ -1,5 +1,4 @@
-﻿using System;
-using System.Drawing;
+﻿using System.Drawing;
 using System.IO;
 
 namespace RemoteDesktopClient.Services
@@ -9,8 +8,9 @@ namespace RemoteDesktopClient.Services
         public Image ConvertBytesToImage(byte[] imageData)
         {
             using (MemoryStream ms = new MemoryStream(imageData))
+            using (Image tempImage = Image.FromStream(ms))
             {
-                return Image.FromStream(ms);
+                return new Bitmap(tempImage);
             }
         }
     }

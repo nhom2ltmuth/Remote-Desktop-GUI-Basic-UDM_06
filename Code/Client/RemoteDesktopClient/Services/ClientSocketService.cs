@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace RemoteDesktopClient.Services
 {
     internal class ClientSocketService
     {
-        private TcpClient client;
-        private NetworkStream stream;
-        private Thread receiveThread;
+        private TcpClient? client;
+        private NetworkStream? stream;
+        private Thread? receiveThread;
         private bool isRunning;
 
-        public Action<string> OnLog;
-        public Action<string> OnMessageReceived;
+        public Action<string>? OnLog;
+        public Action<byte[]>? OnImageReceived;
 
         public bool IsConnected => client != null && client.Connected;
 
@@ -35,7 +34,7 @@ namespace RemoteDesktopClient.Services
 
                 OnLog?.Invoke($"Connected to server: {ip}:{port}");
 
-                receiveThread = new Thread(ReceiveData);
+                receiveThread = new Thread(ReceiveImages);
                 receiveThread.IsBackground = true;
                 receiveThread.Start();
             }
@@ -45,61 +44,56 @@ namespace RemoteDesktopClient.Services
             }
         }
 
-        private void ReceiveData()
+        private void ReceiveImages()
         {
-            byte[] buffer = new byte[4096];
-
-            while (isRunning)
+            try
             {
-                try
+                while (isRunning && stream != null)
                 {
-                    if (stream == null)
+                    byte[]? lengthBytes = ReadExact(4);
+                    if (lengthBytes == null)
                         break;
 
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                    if (bytesRead == 0)
-                    {
-                        OnLog?.Invoke("Server disconnected.");
+                    int imageLength = BitConverter.ToInt32(lengthBytes, 0);
+                    if (imageLength <= 0)
                         break;
-                    }
 
-                    string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    OnLog?.Invoke("Received: " + message);
-                    OnMessageReceived?.Invoke(message);
+                    byte[]? imageBytes = ReadExact(imageLength);
+                    if (imageBytes == null)
+                        break;
+
+                    OnImageReceived?.Invoke(imageBytes);
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                if (isRunning)
                 {
-                    if (isRunning)
-                    {
-                        OnLog?.Invoke("Receive error: " + ex.Message);
-                    }
-                    break;
+                    OnLog?.Invoke("Receive error: " + ex.Message);
                 }
             }
 
             DisconnectInternal(false);
         }
 
-        public void Send(string message)
+        private byte[]? ReadExact(int size)
         {
-            try
-            {
-                if (!IsConnected || stream == null)
-                {
-                    OnLog?.Invoke("Not connected to server.");
-                    return;
-                }
+            byte[] buffer = new byte[size];
+            int totalRead = 0;
 
-                byte[] data = Encoding.UTF8.GetBytes(message);
-                stream.Write(data, 0, data.Length);
-
-                OnLog?.Invoke("Sent: " + message);
-            }
-            catch (Exception ex)
+            while (totalRead < size)
             {
-                OnLog?.Invoke("Send error: " + ex.Message);
+                if (stream == null)
+                    return null;
+
+                int bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+                if (bytesRead == 0)
+                    return null;
+
+                totalRead += bytesRead;
             }
+
+            return buffer;
         }
 
         public void Disconnect()
