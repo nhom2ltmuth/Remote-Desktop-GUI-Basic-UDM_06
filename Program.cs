@@ -1,15 +1,14 @@
 using System;
 using System.Windows.Forms;
 
-namespace RemoteDesktopClient
+internal static class Program
 {
-    static class Program
+    [STAThread]
+    static void Main()
     {
-        [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.Run(new Form1());
-        }
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+
+        Application.Run(new ClientForm()); 
     }
 }
