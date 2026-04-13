@@ -8,110 +8,170 @@ namespace RemoteDesktopServer.Services
 {
     internal class ServerSocketService
     {
-        private TcpListener listener;
-        private TcpClient client;
-        private NetworkStream stream;
-        private Thread listenThread;
+        private TcpListener? server;
+        private TcpClient? client;
+        private NetworkStream? stream;
+        private Thread? listenThread;
+        private Thread? receiveThread;
+        private bool isRunning = false;
 
-        public Action<string> OnLog; // dùng để hiển thị log lên UI
+        private readonly InputControlService inputControl = new InputControlService();
 
-        // Start server
-        public void StartServer(string ip, int port)
+        public Action<string>? OnLog;
+
+        public bool IsRunning => isRunning;
+        public bool IsClientConnected => client != null && client.Connected;
+
+        // ── Khởi động server, lắng nghe kết nối từ client
+        public void Start(int port = 9999)
         {
-            try
+            if (isRunning)
             {
-                listener = new TcpListener(IPAddress.Parse(ip), port);
-                listener.Start();
-
-                OnLog?.Invoke("Server started. Waiting for client...");
-
-                listenThread = new Thread(ListenClient);
-                listenThread.IsBackground = true;
-                listenThread.Start();
+                OnLog?.Invoke("Server đang chạy rồi.");
+                return;
             }
-            catch (Exception ex)
-            {
-                OnLog?.Invoke("Error: " + ex.Message);
-            }
+
+            server = new TcpListener(IPAddress.Any, port);
+            server.Start();
+
+            isRunning = true;
+            OnLog?.Invoke("Server đã khởi động. Đang chờ client kết nối...");
+
+            listenThread = new Thread(ListenClient) { IsBackground = true };
+            listenThread.Start();
         }
 
-        // Lắng nghe client
+        // ── Chấp nhận kết nối và bắt đầu nhận lệnh từ client
         private void ListenClient()
         {
             try
             {
-                client = listener.AcceptTcpClient();
-                stream = client.GetStream();
+                while (isRunning && server != null)
+                {
+                    client = server.AcceptTcpClient();
+                    stream = client.GetStream();
+                    OnLog?.Invoke("Client đã kết nối!");
 
-                OnLog?.Invoke("Client connected!");
-
-                ReceiveData();
+                    // Bắt đầu thread nhận lệnh điều khiển từ client
+                    receiveThread = new Thread(ReceiveCommands) { IsBackground = true };
+                    receiveThread.Start();
+                }
+            }
+            catch (SocketException)
+            {
+                if (isRunning)
+                    OnLog?.Invoke("Lỗi socket khi đang lắng nghe.");
             }
             catch (Exception ex)
             {
-                OnLog?.Invoke("Error: " + ex.Message);
+                OnLog?.Invoke("Lỗi: " + ex.Message);
             }
         }
 
-        // Nhận dữ liệu
-        private void ReceiveData()
-        {
-            byte[] buffer = new byte[1024];
-
-            while (true)
-            {
-                try
-                {
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                    if (bytesRead == 0)
-                    {
-                        OnLog?.Invoke("Client disconnected.");
-                        break;
-                    }
-
-                    string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    OnLog?.Invoke("Received: " + message);
-                }
-                catch
-                {
-                    OnLog?.Invoke("Connection lost.");
-                    break;
-                }
-            }
-        }
-
-        //  Gửi dữ liệu
-        public void Send(string message)
+        // ── Nhận lệnh điều khiển chuột/bàn phím từ client 
+        // Giao thức: [4 byte độ dài][N byte chuỗi UTF-8]
+        // Chuỗi có dạng: "CMD|<loại>|<tham số>"
+        private void ReceiveCommands()
         {
             try
             {
-                if (stream != null)
+                while (isRunning && stream != null)
                 {
-                    byte[] data = Encoding.UTF8.GetBytes(message);
-                    stream.Write(data, 0, data.Length);
+                    byte[]? lenBytes = ReadExact(4);
+                    if (lenBytes == null) break;
 
-                    OnLog?.Invoke("Sent: " + message);
+                    int len = BitConverter.ToInt32(lenBytes, 0);
+                    if (len <= 0 || len > 4096) continue; // kiểm tra độ dài hợp lệ
+
+                    byte[]? data = ReadExact(len);
+                    if (data == null) break;
+
+                    string command = Encoding.UTF8.GetString(data);
+
+                    // Chỉ xử lý các lệnh bắt đầu bằng "CMD|"
+                    if (command.StartsWith("CMD|"))
+                    {
+                        inputControl.Execute(command);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                OnLog?.Invoke("Send error: " + ex.Message);
+                if (isRunning)
+                    OnLog?.Invoke("Lỗi nhận lệnh: " + ex.Message);
             }
         }
 
-        //  Dừng server
+        // ── Đọc đúng số byte yêu cầu từ stream 
+        private byte[]? ReadExact(int size)
+        {
+            if (stream == null) return null;
+            byte[] buffer = new byte[size];
+            int totalRead = 0;
+
+            while (totalRead < size)
+            {
+                int bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+                if (bytesRead == 0) return null;
+                totalRead += bytesRead;
+            }
+
+            return buffer;
+        }
+
+        // ── Gửi dữ liệu màn hình sang client 
+        // [4 byte ảnh][JPEG]
+        public void SendData(byte[] data)
+        {
+            try
+            {
+                if (stream != null && client != null && client.Connected)
+                {
+                    byte[] lengthBytes = BitConverter.GetBytes(data.Length);
+                    stream.Write(lengthBytes, 0, lengthBytes.Length);
+                    stream.Write(data, 0, data.Length);
+                    stream.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                OnLog?.Invoke("Lỗi gửi dữ liệu: " + ex.Message);
+            }
+        }
+
+        //  Dừng server và giải phóng tài nguyên 
         public void Stop()
         {
+            isRunning = false;
+
             try
             {
                 stream?.Close();
                 client?.Close();
-                listener?.Stop();
+                server?.Stop();
 
-                OnLog?.Invoke("Server stopped.");
+                if (listenThread != null && listenThread.IsAlive)
+                {
+                    listenThread.Join(500);
+                    listenThread = null;
+                }
+
+                if (receiveThread != null && receiveThread.IsAlive)
+                {
+                    receiveThread.Join(500);
+                    receiveThread = null;
+                }
+
+                stream = null;
+                client = null;
+                server = null;
+
+                OnLog?.Invoke("Server đã dừng.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                OnLog?.Invoke("Lỗi khi dừng server: " + ex.Message);
+            }
         }
     }
 }

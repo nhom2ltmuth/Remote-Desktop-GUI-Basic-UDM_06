@@ -1,32 +1,41 @@
-﻿
-using System;
+﻿using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace RemoteDesktopClient.Services
 {
     internal class ClientSocketService
     {
-        private TcpClient client;
-        private NetworkStream stream;
-        private Thread receiveThread;
+        private TcpClient? client;
+        private NetworkStream? stream;
+        private Thread? receiveThread;
+        private bool isRunning;
 
-        public Action<string> OnLog;
+        public Action<string>? OnLog;
+        public Action<byte[]>? OnImageReceived;
 
+        public bool IsConnected => client != null && client.Connected;
+
+        //  Kết nối tới server 
         public void Connect(string ip, int port)
         {
             try
             {
+                if (IsConnected)
+                {
+                    OnLog?.Invoke("Đã kết nối tới server rồi.");
+                    return;
+                }
+
                 client = new TcpClient();
                 client.Connect(ip, port);
-
                 stream = client.GetStream();
+                isRunning = true;
 
-                OnLog?.Invoke("Connected to server!");
+                OnLog?.Invoke($"Connected to server: {ip}:{port}");
 
-                receiveThread = new Thread(ReceiveData);
-                receiveThread.IsBackground = true;
+                // Bắt đầu thread nhận ảnh màn hình từ server
+                receiveThread = new Thread(ReceiveImages) { IsBackground = true };
                 receiveThread.Start();
             }
             catch (Exception ex)
@@ -35,59 +44,84 @@ namespace RemoteDesktopClient.Services
             }
         }
 
-        private void ReceiveData()
-        {
-            byte[] buffer = new byte[1024];
-
-            while (true)
-            {
-                try
-                {
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                    if (bytesRead == 0)
-                    {
-                        OnLog?.Invoke("Server disconnected.");
-                        break;
-                    }
-
-                    string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    OnLog?.Invoke("Received: " + message);
-                }
-                catch
-                {
-                    OnLog?.Invoke("Disconnected.");
-                    break;
-                }
-            }
-        }
-
-        public void Send(string message)
+        // ── Nhận các frame màn hình từ server 
+        //  [4 byte ảnh][JPEG]
+        private void ReceiveImages()
         {
             try
             {
-                if (stream != null)
+                while (isRunning && stream != null)
                 {
-                    byte[] data = Encoding.UTF8.GetBytes(message);
-                    stream.Write(data, 0, data.Length);
-                    OnLog?.Invoke("Sent: " + message);
+                    byte[]? lenBytes = ReadExact(4);
+                    if (lenBytes == null) break;
+
+                    int imageLength = BitConverter.ToInt32(lenBytes, 0);
+                    if (imageLength <= 0) break;
+
+                    byte[]? imageBytes = ReadExact(imageLength);
+                    if (imageBytes == null) break;
+
+                    OnImageReceived?.Invoke(imageBytes);
                 }
             }
             catch (Exception ex)
             {
-                OnLog?.Invoke("Send error: " + ex.Message);
+                if (isRunning)
+                    OnLog?.Invoke("Lỗi nhận dữ liệu: " + ex.Message);
             }
+
+            DisconnectInternal(false);
         }
 
-        public void Disconnect()
+        // ── Đọc đúng số byte yêu cầu từ stream 
+        private byte[]? ReadExact(int size)
+        {
+            byte[] buffer = new byte[size];
+            int totalRead = 0;
+
+            while (totalRead < size)
+            {
+                if (stream == null) return null;
+
+                int bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+                if (bytesRead == 0) return null;
+
+                totalRead += bytesRead;
+            }
+
+            return buffer;
+        }
+
+        // ── Gửi raw bytes (dùng để gửi lệnh điều khiển input) 
+        public void SendRaw(byte[] data)
+        {
+            if (stream == null || !IsConnected) return;
+            stream.Write(data, 0, data.Length);
+            stream.Flush();
+        }
+
+        // ── Ngắt kết nối 
+        public void Disconnect() => DisconnectInternal(true);
+
+        private void DisconnectInternal(bool writeLog)
         {
             try
             {
+                isRunning = false;
                 stream?.Close();
                 client?.Close();
-                OnLog?.Invoke("Disconnected from server.");
+
+                stream = null;
+                client = null;
+                receiveThread = null;
+
+                if (writeLog)
+                    OnLog?.Invoke("Disconnected from server.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                OnLog?.Invoke("Lỗi ngắt kết nối: " + ex.Message);
+            }
         }
     }
-}     
+}
