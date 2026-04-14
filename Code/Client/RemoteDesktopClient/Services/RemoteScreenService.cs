@@ -5,13 +5,11 @@ namespace RemoteDesktopClient.Services
 {
     internal class RemoteScreenService
     {
-        public Image ConvertBytesToImage(byte[] imageData)
+        public Image ConvertBytesToImage(byte[] imageBytes)
         {
-            using (MemoryStream ms = new MemoryStream(imageData))
-            using (Image tempImage = Image.FromStream(ms))
-            {
-                return new Bitmap(tempImage);
-            }
+            using MemoryStream ms = new MemoryStream(imageBytes);
+            using Image tempImage = Image.FromStream(ms);
+            return new Bitmap(tempImage);
         }
     }
 }

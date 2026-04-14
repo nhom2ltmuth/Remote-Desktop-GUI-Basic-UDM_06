@@ -1,123 +1,142 @@
-namespace RemoteDesktopServer
+namespace RemoteDesktopServer.Forms
 {
     partial class ServerForm
     {
-        /// <summary>
-        ///  Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        ///  Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        private System.Windows.Forms.TextBox txtPort;
+        private System.Windows.Forms.TextBox txtLog;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Label lblIpAddress;
+        private System.Windows.Forms.Button btnStart;
+        private System.Windows.Forms.Button btnStop;
+        private System.Windows.Forms.Label lblPortTitle;
+        private System.Windows.Forms.Label lblStatusTitle;
+        private System.Windows.Forms.Label lblIpTitle;
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
-            lblTitle = new Label();
-            lblStatus = new Label();
-            lblIP = new Label();
-            lblPort = new Label();
-            btnStart = new Button();
-            btnStop = new Button();
+            txtPort = new System.Windows.Forms.TextBox();
+            txtLog = new System.Windows.Forms.TextBox();
+            lblStatus = new System.Windows.Forms.Label();
+            lblIpAddress = new System.Windows.Forms.Label();
+            btnStart = new System.Windows.Forms.Button();
+            btnStop = new System.Windows.Forms.Button();
+            lblPortTitle = new System.Windows.Forms.Label();
+            lblStatusTitle = new System.Windows.Forms.Label();
+            lblIpTitle = new System.Windows.Forms.Label();
             SuspendLayout();
             // 
-            // lblTitle
+            // txtPort
             // 
-            lblTitle.Font = new Font("Microsoft Sans Serif", 8.25F);
-            lblTitle.Location = new Point(30, 10);
-            lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(208, 25);
-            lblTitle.TabIndex = 0;
-            lblTitle.Text = "REMOTE DESKTOP SERVER";
-            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
+            txtPort.Location = new System.Drawing.Point(70, 15);
+            txtPort.Name = "txtPort";
+            txtPort.Size = new System.Drawing.Size(80, 23);
+            txtPort.TabIndex = 0;
+            // 
+            // txtLog
+            // 
+            txtLog.Location = new System.Drawing.Point(12, 90);
+            txtLog.Multiline = true;
+            txtLog.Name = "txtLog";
+            txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            txtLog.Size = new System.Drawing.Size(760, 320);
+            txtLog.TabIndex = 5;
             // 
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(30, 50);
+            lblStatus.Location = new System.Drawing.Point(410, 20);
             lblStatus.Name = "lblStatus";
-            lblStatus.Size = new Size(132, 20);
-            lblStatus.TabIndex = 1;
-            lblStatus.Text = "Waiting for client...";
+            lblStatus.Size = new System.Drawing.Size(83, 15);
+            lblStatus.TabIndex = 6;
+            lblStatus.Text = "Server stopped";
             // 
-            // lblIP
+            // lblIpAddress
             // 
-            lblIP.AutoSize = true;
-            lblIP.Location = new Point(30, 80);
-            lblIP.Name = "lblIP";
-            lblIP.Size = new Size(85, 20);
-            lblIP.TabIndex = 2;
-            lblIP.Text = "IP: 127.0.0.1";
-            // 
-            // lblPort
-            // 
-            lblPort.AutoSize = true;
-            lblPort.Location = new Point(30, 110);
-            lblPort.Name = "lblPort";
-            lblPort.Size = new Size(70, 20);
-            lblPort.TabIndex = 3;
-            lblPort.Text = "Port:9999";
+            lblIpAddress.AutoSize = true;
+            lblIpAddress.Location = new System.Drawing.Point(70, 55);
+            lblIpAddress.Name = "lblIpAddress";
+            lblIpAddress.Size = new System.Drawing.Size(58, 15);
+            lblIpAddress.TabIndex = 7;
+            lblIpAddress.Text = "127.0.0.1";
             // 
             // btnStart
             // 
-            btnStart.Location = new Point(30, 150);
+            btnStart.Location = new System.Drawing.Point(180, 14);
             btnStart.Name = "btnStart";
-            btnStart.Size = new Size(90, 30);
-            btnStart.TabIndex = 4;
-            btnStart.Text = "Start ";
+            btnStart.Size = new System.Drawing.Size(90, 25);
+            btnStart.TabIndex = 1;
+            btnStart.Text = "Start";
             btnStart.UseVisualStyleBackColor = true;
             btnStart.Click += btnStart_Click;
             // 
             // btnStop
             // 
-            btnStop.Location = new Point(150, 150);
+            btnStop.Location = new System.Drawing.Point(280, 14);
             btnStop.Name = "btnStop";
-            btnStop.Size = new Size(90, 30);
-            btnStop.TabIndex = 5;
+            btnStop.Size = new System.Drawing.Size(90, 25);
+            btnStop.TabIndex = 2;
             btnStop.Text = "Stop";
             btnStop.UseVisualStyleBackColor = true;
             btnStop.Click += btnStop_Click;
             // 
+            // lblPortTitle
+            // 
+            lblPortTitle.AutoSize = true;
+            lblPortTitle.Location = new System.Drawing.Point(12, 19);
+            lblPortTitle.Name = "lblPortTitle";
+            lblPortTitle.Size = new System.Drawing.Size(32, 15);
+            lblPortTitle.TabIndex = 8;
+            lblPortTitle.Text = "Port:";
+            // 
+            // lblStatusTitle
+            // 
+            lblStatusTitle.AutoSize = true;
+            lblStatusTitle.Location = new System.Drawing.Point(360, 20);
+            lblStatusTitle.Name = "lblStatusTitle";
+            lblStatusTitle.Size = new System.Drawing.Size(42, 15);
+            lblStatusTitle.TabIndex = 9;
+            lblStatusTitle.Text = "Status:";
+            // 
+            // lblIpTitle
+            // 
+            lblIpTitle.AutoSize = true;
+            lblIpTitle.Location = new System.Drawing.Point(12, 55);
+            lblIpTitle.Name = "lblIpTitle";
+            lblIpTitle.Size = new System.Drawing.Size(20, 15);
+            lblIpTitle.TabIndex = 10;
+            lblIpTitle.Text = "IP:";
+            // 
             // ServerForm
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(379, 235);
+            AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            ClientSize = new System.Drawing.Size(784, 431);
+            Controls.Add(lblIpTitle);
+            Controls.Add(lblStatusTitle);
+            Controls.Add(lblPortTitle);
             Controls.Add(btnStop);
             Controls.Add(btnStart);
-            Controls.Add(lblPort);
-            Controls.Add(lblIP);
+            Controls.Add(lblIpAddress);
             Controls.Add(lblStatus);
-            Controls.Add(lblTitle);
+            Controls.Add(txtLog);
+            Controls.Add(txtPort);
             Name = "ServerForm";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             Text = "Remote Desktop Server";
-            Load += ServerForm_Load;
             ResumeLayout(false);
             PerformLayout();
         }
-
-        #endregion
-
-        private Label lblTitle;
-        private Label lblStatus;
-        private Label lblIP;
-        private Label lblPort;
-        private Button btnStart;
-        private Button btnStop;
     }
 }

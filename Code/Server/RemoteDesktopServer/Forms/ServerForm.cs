@@ -1,145 +1,173 @@
 using System;
-using System.Threading;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Windows.Forms;
+using RemoteDesktopServer.Models;
 using RemoteDesktopServer.Services;
 
-namespace RemoteDesktopServer
+namespace RemoteDesktopServer.Forms
 {
     public partial class ServerForm : Form
     {
         private readonly ServerSocketService socketService;
-        private readonly ScreenCaptureService screenService;
-
-        private Thread? sendScreenThread;
-        private bool isSending;
+        private readonly ScreenCaptureService screenCaptureService;
+        private readonly InputControlService inputControlService;
+        private readonly CommandHandlerService commandHandlerService;
+        private readonly ClientSession clientSession;
 
         public ServerForm()
         {
             InitializeComponent();
 
-            socketService = new ServerSocketService();
-            screenService = new ScreenCaptureService();
+            clientSession = new ClientSession();
 
-            socketService.OnLog += UpdateStatus;
+            socketService = new ServerSocketService();
+            screenCaptureService = new ScreenCaptureService();
+            inputControlService = new InputControlService();
+            commandHandlerService = new CommandHandlerService(inputControlService);
+
+            InitializeServices();
+
+            Load += ServerForm_Load;
+            FormClosing += ServerForm_FormClosing;
         }
 
-        private void ServerForm_Load(object sender, EventArgs e)
+        private void InitializeServices()
         {
-            btnStop.Enabled = false;
+            socketService.OnLog += AddLog;
+            screenCaptureService.OnLog += AddLog;
+            inputControlService.OnLog += AddLog;
+            commandHandlerService.OnLog += AddLog;
+
+            socketService.OnClientConnected += session =>
+            {
+                clientSession.IPAddress = session.IPAddress;
+                clientSession.Port = session.Port;
+                clientSession.IsConnected = true;
+
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        lblStatus.Text = "Client connected";
+                        AddLog($"Client connected: {session.IPAddress}:{session.Port}");
+                    }));
+                }
+                else
+                {
+                    lblStatus.Text = "Client connected";
+                    AddLog($"Client connected: {session.IPAddress}:{session.Port}");
+                }
+
+                screenCaptureService.Start(socketService);
+            };
+
+            socketService.OnClientDisconnected += () =>
+            {
+                clientSession.IsConnected = false;
+
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        lblStatus.Text = "Waiting for client...";
+                        AddLog("Client disconnected.");
+                    }));
+                }
+                else
+                {
+                    lblStatus.Text = "Waiting for client...";
+                    AddLog("Client disconnected.");
+                }
+
+                screenCaptureService.Stop();
+            };
+
+            socketService.OnCommandReceived += command =>
+            {
+                commandHandlerService.HandleCommand(command);
+            };
+        }
+
+        private void ServerForm_Load(object? sender, EventArgs e)
+        {
+            txtPort.Text = "9999";
             lblStatus.Text = "Server stopped";
+            lblIpAddress.Text = GetLocalIPv4();
+
+            btnStop.Enabled = false;
+
+            AddLog("Server form loaded.");
+            AddLog("Local IP: " + lblIpAddress.Text);
         }
 
         private void btnStart_Click(object sender, EventArgs e)
         {
-            try
+            if (!int.TryParse(txtPort.Text.Trim(), out int port))
             {
-                if (socketService.IsRunning)
-                {
-                    MessageBox.Show("Server is already running.");
-                    return;
-                }
-
-                socketService.Start(9999);
-
-                btnStart.Enabled = false;
-                btnStop.Enabled = true;
-
-                isSending = true;
-                sendScreenThread = new Thread(SendScreenLoop);
-                sendScreenThread.IsBackground = true;
-                sendScreenThread.Start();
+                MessageBox.Show("Port không hợp lệ.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi khi khởi động server: " + ex.Message);
-                StopServerUI();
-            }
-        }
 
-        private void SendScreenLoop()
-        {
-            while (isSending)
-            {
-                try
-                {
-                    if (socketService.IsClientConnected)
-                    {
-                        byte[] screenBytes = screenService.CaptureScreenBytes();
-                        socketService.SendData(screenBytes);
-                    }
+            socketService.Start(port);
 
-                    Thread.Sleep(200);
-                }
-                catch (Exception ex)
-                {
-                    UpdateStatus("Send screen error: " + ex.Message);
-                    Thread.Sleep(500);
-                }
-            }
+            lblStatus.Text = "Waiting for client...";
+            btnStart.Enabled = false;
+            btnStop.Enabled = true;
+
+            AddLog($"Server started on port {port}.");
         }
 
         private void btnStop_Click(object sender, EventArgs e)
         {
-            try
-            {
-                StopServer();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi khi dừng server: " + ex.Message);
-            }
+            StopServer();
         }
 
         private void StopServer()
         {
-            isSending = false;
-
-            if (sendScreenThread != null && sendScreenThread.IsAlive)
-            {
-                sendScreenThread.Join(500);
-                sendScreenThread = null;
-            }
-
+            screenCaptureService.Stop();
             socketService.Stop();
-            StopServerUI();
+
+            clientSession.IsConnected = false;
+
+            lblStatus.Text = "Server stopped";
+            btnStart.Enabled = true;
+            btnStop.Enabled = false;
+
+            AddLog("Server stopped.");
         }
 
-        private void StopServerUI()
+        private void ServerForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
-            if (InvokeRequired)
+            StopServer();
+        }
+
+        private void AddLog(string message)
+        {
+            if (txtLog.InvokeRequired)
             {
-                Invoke(new Action(StopServerUI));
+                txtLog.Invoke(new Action<string>(AddLog), message);
                 return;
             }
 
-            btnStart.Enabled = true;
-            btnStop.Enabled = false;
-            lblStatus.Text = "Server stopped";
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
         }
 
-        private void UpdateStatus(string message)
-        {
-            if (lblStatus.InvokeRequired)
-            {
-                lblStatus.Invoke(new Action(() =>
-                {
-                    lblStatus.Text = message;
-                }));
-            }
-            else
-            {
-                lblStatus.Text = message;
-            }
-        }
-
-        private void ServerForm_FormClosing(object sender, FormClosingEventArgs e)
+        private string GetLocalIPv4()
         {
             try
             {
-                StopServer();
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+
+                var ip = host.AddressList
+                    .FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+
+                return ip?.ToString() ?? "127.0.0.1";
             }
             catch
             {
+                return "127.0.0.1";
             }
         }
     }
