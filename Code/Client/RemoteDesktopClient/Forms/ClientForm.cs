@@ -35,6 +35,8 @@ namespace RemoteDesktopClient.Forms
             txtPort.Text = "9999";
             lblStatus.Text = "Disconnected";
 
+            WindowState = FormWindowState.Maximized;
+
             UpdateButtonState(false);
             AddLog("Client form loaded.");
         }
@@ -104,6 +106,12 @@ namespace RemoteDesktopClient.Forms
 
             lblStatus.Text = "Disconnected";
             UpdateButtonState(false);
+
+            if (picRemoteScreen.Image != null)
+            {
+                picRemoteScreen.Image.Dispose();
+                picRemoteScreen.Image = null;
+            }
         }
 
         private void DisplayRemoteScreen(byte[] imageBytes)
@@ -175,6 +183,12 @@ namespace RemoteDesktopClient.Forms
                 remoteScreenInfo.Resolution = Size.Empty;
                 lblStatus.Text = "Disconnected";
                 UpdateButtonState(false);
+
+                if (picRemoteScreen.Image != null)
+                {
+                    picRemoteScreen.Image.Dispose();
+                    picRemoteScreen.Image = null;
+                }
             }
         }
 
