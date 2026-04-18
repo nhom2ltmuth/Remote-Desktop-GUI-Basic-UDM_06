@@ -145,7 +145,7 @@
             picRemoteScreen.Size = new System.Drawing.Size(1200, 515);
             picRemoteScreen.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             picRemoteScreen.TabIndex = 4;
-            picRemoteScreen.TabStop = false;ừ 
+            picRemoteScreen.TabStop = false;
             // 
             // lblIpTitle
             // 
